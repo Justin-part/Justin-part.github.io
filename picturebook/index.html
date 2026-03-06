@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Picture Book Reviews</title>
+    <link rel="stylesheet" href="../assets/css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+    <!-- Supabase via LOCAL file (Stable) -->
+    <script src="../assets/js/supabase.js"></script>
+
+    <style>
+        body {
+            background-color: #f0f0f0;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            overflow-x: hidden;
+            /* Prevent horizontal scroll */
+        }
+
+        /* Layout Container */
+        .main-layout {
+            display: flex;
+            width: 95%;
+            max-width: 1400px;
+            margin: 30px auto;
+            gap: 20px;
+            flex-wrap: wrap;
+            /* Adjust for smaller screens */
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        /* Left Column: Book */
+        .left-column {
+            flex: 2;
+            min-width: 600px;
+            /* Minimum width to prevent crushing */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            /* Container for scaling */
+        }
+
+        /* Book Container */
+        .book-scaler {
+            transform: scale(0.85);
+            /* Scale down slightly to fit better */
+            transform-origin: center top;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            margin-bottom: -50px;
+            /* Compensate for scale empty space */
+        }
+
+        .book-wrapper {
+            position: relative;
+            width: 900px;
+            height: 600px;
+            /* Center the book visually initially */
+            /* Initial State: Closed. Cover (Right Half) visible. Shift Left by 25% (225px) to center it. */
+            transform: translateX(-25%);
+            transition: transform 1s;
+        }
+
+        .paper {
+            position: absolute;
+            width: 50%;
+            height: 100%;
+            top: 0;
+            left: 50%;
+            /* Start on the RIGHT side */
+            perspective: 1500px;
+            transform-origin: left center;
+            /* Pivot on the LEFT edge (spine) */
+            transition: transform 1s;
+            transform-style: preserve-3d;
+            cursor: pointer;
+            background: white;
+        }
+
+        .front,
+        .back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            background: white;
+            padding: 40px;
+            box-shadow: 1px 1px 5px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        /* Front face is visible initially (Right side) */
+        .front {
+            z-index: 2;
+            background: #fdfdfd;
+            border-left: 1px solid #ddd;
+            /* Spine border */
+        }
+
+        /* Back face is hidden initially (rotated) */
+        .back {
+            z-index: 1;
+            transform: rotateY(180deg);
+            border-right: 1px solid #ddd;
+            /* Spine border */
+            background: #fdfdfd;
+        }
+
+        /* Cover styling */
+        #p1 .front {
+            background: #2c3e50;
+            color: white;
+            border-radius: 0 5px 5px 0;
+            /* Right corners rounded */
+        }
+
+        .back-cover {
+            background: #2c3e50;
+            color: white;
+            border-radius: 5px 0 0 5px;
+            /* Left corners rounded */
+        }
+
+        /* Flip Action: Rotate -180deg to move from Right to Left */
+        .flipped {
+            transform: rotateY(-180deg);
+        }
+
+        /* Content Styling */
+        .page-content {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+
+        .book-cover-area {
+            width: 80%;
+            height: 70%;
+            border: 2px dashed #ccc;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #fafafa;
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .book-cover-area img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            box-shadow: 3px 3px 10px rgba(0, 0, 0, 0.2);
+            display: block;
+        }
+
+        .img-error {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: red;
+            font-weight: bold;
+            text-align: center;
+            display: none;
+        }
+
+        .review-area {
+            width: 100%;
+            text-align: left;
+            padding: 20px;
+        }
+
+        .review-area h3 {
+            font-size: 1.8rem;
+            margin-bottom: 5px;
+            color: #333;
+        }
+
+        .review-date {
+            font-size: 0.8rem;
+            color: #888;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 10px;
+            display: block;
+        }
+
+        .review-text {
+            font-size: 1rem;
+            line-height: 1.8;
+            color: #555;
+            white-space: pre-line;
+            max-height: 350px;
+            overflow-y: auto;
+        }
+
+        .rating {
+            color: #f1c40f;
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+        }
+
+        .page-number {
+            position: absolute;
+            bottom: 20px;
+            font-size: 14px;
+            color: #999;
+            width: 100%;
+            text-align: center;
+        }
+
+        .controls {
+            text-align: center;
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            z-index: 100;
+        }
+
+        .btn-nav {
+            padding: 12px 30px;
+            background: #2c3e50;
+            color: white;
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+            font-weight: 600;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .btn-nav:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+            background: #34495e;
+        }
+
+        /* Right Column: Table */
+        .right-column {
+            flex: 1;
+            min-width: 300px;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            height: fit-content;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 99999;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.4);
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 10% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 500px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        .btn-submit {
+            background: #27ae60;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            width: 100%;
+            font-size: 1.1rem;
+        }
+
+        .btn-edit-sm {
+            padding: 5px 10px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.8em;
+        }
+
+        .btn-edit-sm:hover {
+            background: #2980b9;
+        }
+
+        #addReviewBtn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: #e74c3c;
+            color: white;
+            font-size: 30px;
+            border: 2px solid white;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 99999;
+        }
+
+        #addReviewBtn:hover {
+            transform: scale(1.1);
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <nav class="navbar">
+            <div class="logo"><a href="../index.html">Justin.</a></div>
+            <ul class="nav-links">
+                <li><a href="../index.html#home">Home</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main class="main-layout">
+        <!-- Left Column: Book -->
+        <div class="left-column">
+            <!-- Scaler Wrapper -->
+            <div class="book-scaler">
+                <div class="book-wrapper" id="book">
+                    <!-- Cover Paper (p1) -->
+                    <div id="p1" class="paper">
+                        <div class="front">
+                            <!-- Front Cover (Right) -->
+                            <div class="page-content">
+                                <h2>My Picture Book Reviews</h2>
+                                <p style="margin-top:20px; font-size: 4em;">📚</p>
+                                <p style="margin-top:40px; font-size:0.9em; opacity:0.8;">Click 'Next' to open</p>
+                            </div>
+                        </div>
+                        <div class="back" id="back-p1">
+                            <!-- Inside Front Cover (Left) -->
+                            <div class="page-content">
+                                <p>Loading reviews...</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Last Paper -->
+                    <div id="last-paper" class="paper">
+                        <div class="front" id="last-front">
+                            <div class="page-content">
+                                <p>The End.</p>
+                            </div>
+                        </div>
+                        <div class="back back-cover">
+                            <div class="page-content">
+                                <h2>The End</h2>
+                                <a href="../index.html" class="btn">Back to Home</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div> <!-- End Scaler -->
+
+            <div class="controls">
+                <button class="btn-nav" id="prevBtn">Previous</button>
+                <button class="btn-nav" id="nextBtn">Next</button>
+            </div>
+        </div>
+
+        <!-- Right Column: Table -->
+        <div class="right-column">
+            <div
+                style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:2px solid #eee; padding-bottom:10px;">
+                <h3 style="margin:0;">Review List</h3>
+                <button onclick="openNewReviewModal()"
+                    style="padding:5px 10px; background:#e74c3c; color:white; border:none; border-radius:5px; cursor:pointer;">+
+                    Add New</button>
+            </div>
+
+            <table style="width:100%; border-collapse:collapse;">
+                <thead>
+                    <tr style="background:#f8f9fa;">
+                        <th style="padding:10px; text-align:left; border-bottom:1px solid #ddd;">Title</th>
+                        <th style="padding:10px; text-align:center; border-bottom:1px solid #ddd;">Level</th>
+                        <th style="padding:10px; text-align:center; border-bottom:1px solid #ddd;">word</th>
+                        <th style="padding:10px; text-align:center; border-bottom:1px solid #ddd;">comm.</th>
+                        <th style="padding:10px; text-align:center; border-bottom:1px solid #ddd;">Edit</th>
+                    </tr>
+                </thead>
+                <tbody id="reviewTableBody">
+                    <!-- Rows injected here -->
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <!-- Floating Add Button (Optional, keeping it as well) -->
+    <button id="addReviewBtn" onclick="openNewReviewModal()">+</button>
+
+    <div id="reviewModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2 style="margin-bottom: 20px; text-align: center;">Write a Review</h2>
+            <form id="reviewForm">
+                <div class="form-group">
+                    <label>Book Title <input type="text" id="bookTitle" required></label>
+                </div>
+                <div class="form-group">
+                    <label>word <input type="text" id="bookWord"></label>
+                </div>
+                <div class="form-group">
+                    <label>comm. <input type="text" id="bookCommand"></label>
+                </div>
+                <div class="form-group">
+                    <label>Cover Image <input type="file" id="bookCover" accept="image/*" required></label>
+                </div>
+                <div class="form-group">
+                    <label>Level
+                        <select id="rating">
+                            <option value="1">Level 1</option>
+                            <option value="2">Level 2</option>
+                            <option value="3">Level 3</option>
+                            <option value="4">Level 4</option>
+                            <option value="5">Level 5</option>
+                        </select>
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label>Review <textarea id="reviewText" rows="5" required></textarea></label>
+                </div>
+                <div class="form-group">
+                    <label>Secret Code <input type="password" id="secretCode" required placeholder="1234"></label>
+                </div>
+                <button type="submit" class="btn-submit">Save Review</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MAIN SCRIPT -->
+    <script>
+        // --- Configuration ---
+        const SUPABASE_URL = 'https://joftjvzbphcihndmrsvg.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpvZnRqdnpicGhjaWhuZG1yc3ZnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEzOTM3MjYsImV4cCI6MjA4Njk2OTcyNn0.45_A2YcoA27svdZJ5HEDmUY-3HMTqFYts8ty-30k55U';
+        const SECRET_CODE = '1234';
+
+        // Check Supabase
+        let supabase = null;
+        if (typeof window.supabase !== 'undefined') {
+            try {
+                supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            } catch (e) {
+                console.error("Supabase Init Failed: " + e.message);
+                alert("Database Connection Failed. Please refresh.");
+            }
+        } else {
+            console.error("window.supabase is UNDEFINED! Local script load failed.");
+            alert("System Error: Could not load database script.");
+        }
+
+        // --- Modal ---
+        const modal = document.getElementById("reviewModal");
+        const span = document.getElementsByClassName("close")[0];
+
+        function openModal() {
+            if (modal) {
+                modal.style.display = "block";
+            }
+        }
+
+        if (span) {
+            span.onclick = function () {
+                modal.style.display = "none";
+            }
+        }
+
+        window.onclick = function (event) {
+            if (event.target == modal) { modal.style.display = "none"; }
+        }
+
+        // --- Logic ---
+        const bookWrapper = document.getElementById('book');
+        const prevBtn = document.querySelector('#prevBtn');
+        const nextBtn = document.querySelector('#nextBtn');
+
+        // State 1: Closed Cover (Front).
+        // State 2: Cover Open (Back visible on Left).
+        let currentState = 1;
+        let numOfPapers = 1;
+        let maxState = numOfPapers + 1; // maxState means everything is flipped to Left.
+
+        // Global variables for Edit Mode
+        let allReviews = [];
+        let editingReviewId = null;
+
+        async function loadReviews() {
+            if (!supabase) return;
+
+            const { data: reviews, error: err } = await supabase
+                .from('reviews')
+                .select('*')
+                .order('created_at', { ascending: false }); // Newest First
+
+            if (err) {
+                console.error("Fetch error: " + err.message);
+                alert("Failed to load reviews.");
+                return;
+            }
+            allReviews = reviews || [];
+            renderBook(allReviews);
+            renderTable(allReviews);
+        }
+
+        function renderTable(reviews) {
+            const tbody = document.getElementById('reviewTableBody');
+            tbody.innerHTML = '';
+
+            if (reviews.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:20px;">No reviews yet.</td></tr>';
+                return;
+            }
+
+            reviews.forEach((review, index) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="padding:10px; border-bottom:1px solid #eee;">${review.title}</td>
+                    <td style="padding:10px; text-align:center; border-bottom:1px solid #eee;">
+                        <span style="background:#f1c40f; color:white; padding:2px 8px; border-radius:10px; font-size:0.8em;">Lv.${review.rating}</span>
+                    </td>
+                    <td style="padding:10px; text-align:center; border-bottom:1px solid #eee;">${review.voca || ''}</td>
+                    <td style="padding:10px; text-align:center; border-bottom:1px solid #eee;">${review.commandment || ''}</td>
+                    <td style="padding:10px; text-align:center; border-bottom:1px solid #eee;">
+                        <button class="btn-edit-sm" onclick="editReview(${index})">Edit</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function editReview(index) {
+            const review = allReviews[index];
+            if (!review) return;
+
+            editingReviewId = review.id;
+
+            // Populate Modal
+            document.getElementById('bookTitle').value = review.title;
+            document.getElementById('bookWord').value = review.voca || '';
+            document.getElementById('bookCommand').value = review.commandment || '';
+            document.getElementById('rating').value = review.rating;
+            document.getElementById('reviewText').value = review.review_text;
+            document.getElementById('secretCode').value = ''; // User must re-enter code
+
+            // Optional: Hide file input or mark it optional? 
+            // The file input is 'required' in HTML. We should remove 'required' in Edit mode.
+            const fileInput = document.getElementById('bookCover');
+            fileInput.required = false;
+
+            // Change Button Text
+            const btn = document.querySelector('#reviewForm button[type="submit"]');
+            btn.innerText = "Update Review";
+
+            // Open Modal
+            openModal();
+        }
+
+        // Reset Modal State when opening for New Review
+        function openNewReviewModal() {
+            editingReviewId = null;
+            document.getElementById('reviewForm').reset();
+            document.getElementById('bookCover').required = true;
+            document.querySelector('#reviewForm button[type="submit"]').innerText = "Save Review";
+            openModal();
+        }
+
+        function formatDate(isoString) {
+            if (!isoString) return '';
+            const d = new Date(isoString);
+            return d.toLocaleDateString() + ' ' + d.toLocaleTimeString();
+        }
+
+        function createImgTag(url) {
+            return '<div class="book-cover-area" style="background:#eee;">' +
+                '<img src="' + url + '" alt="Cover" style="width:100%; height:100%; object-fit:contain; display:block;" onerror="this.onerror=null; this.src=\'https://via.placeholder.com/150?text=No+Image\';">' +
+                '</div>';
+        }
+
+        function renderBook(reviews) {
+            try {
+                const p1 = document.getElementById('p1');
+                const lastPaper = document.getElementById('last-paper');
+
+                // Clear existing dynamic papers
+                const existingPapers = document.querySelectorAll('.paper');
+                existingPapers.forEach(function (paper) {
+                    if (paper.id !== 'p1' && paper.id !== 'last-paper') {
+                        paper.remove();
+                    }
+                });
+
+                if (reviews.length === 0) {
+                    document.getElementById('back-p1').innerHTML = '<div class="page-content"><p>No reviews yet.</p></div>';
+                    numOfPapers = 1;
+                    maxState = numOfPapers + 1;
+
+                    // Init Z-Index
+                    p1.style.zIndex = 2;
+                    lastPaper.style.zIndex = 1;
+                    return;
+                }
+
+                // Total Papers = Cover (p1) + Review Pages + Back Cover (last-paper)
+                // Review Logic:
+                // Review 0: Left Page (Back of p1), Right Page (Front of p2)
+                // Review 1: Left Page (Back of p2), Right Page (Front of p3) ...
+
+                // Set p1 Back (Review 0 Image)
+                const review1 = reviews[0];
+                const p1BackContent = '<div class="page-content">' + createImgTag(review1.cover_url) + '<p>' + review1.title + '</p></div><span class="page-number">1</span>';
+                document.getElementById('back-p1').innerHTML = p1BackContent;
+
+                const totalPapers = reviews.length + 2;
+                let currentZ = totalPapers;
+
+                // Stack Order: p1 is Topmost (Highest Z), p2 underneath, etc.
+                p1.style.zIndex = currentZ;
+                currentZ--;
+
+                for (let i = 0; i < reviews.length; i++) {
+                    const currentReview = reviews[i];
+                    const nextReview = reviews[i + 1];
+
+                    const paperId = 'p' + (i + 2);
+
+                    const div = document.createElement('div');
+                    div.id = paperId;
+                    div.className = 'paper';
+                    div.style.zIndex = currentZ;
+                    currentZ--; // Decrement Z for next paper
+
+                    // Front of p(i+2): Review i TEXT.
+                    const frontContent = '<div class="front"><div class="page-content"><div class="review-area"><h3>' + currentReview.title + '</h3><span class="review-date">' + formatDate(currentReview.created_at) + '</span><div class="rating">Level: ' + currentReview.rating + '</div><div class="review-text">' + currentReview.review_text + '</div><button onclick="editReview(' + i + ')" style="margin-top:10px; padding:5px 10px; background:#ddd; border:none; border-radius:5px; cursor:pointer;">Edit</button></div></div><span class="page-number">' + ((i + 1) * 2) + '</span></div>';
+
+                    // Back of p(i+2): Review i+1 IMAGE. (Left side when flipped next)
+                    let backContent = '';
+                    if (nextReview) {
+                        backContent = '<div class="back"><div class="page-content">' + createImgTag(nextReview.cover_url) + '<p>' + nextReview.title + '</p></div><span class="page-number">' + ((i + 1) * 2 + 1) + '</span></div>';
+                    } else {
+                        // End of reviews
+                        backContent = '<div class="back"><div class="page-content"><h2>The End</h2></div><span class="page-number">' + ((i + 1) * 2 + 1) + '</span></div>';
+                    }
+
+                    div.innerHTML = frontContent + backContent;
+                    bookWrapper.insertBefore(div, lastPaper);
+                }
+
+                // Last Paper
+                lastPaper.style.zIndex = currentZ;
+                document.getElementById('last-front').innerHTML = '<div class="page-content"></div>'; // Empty right page before closing?
+
+                numOfPapers = totalPapers;
+                maxState = numOfPapers + 1; // Fully closed at end?
+
+            } catch (e) {
+                console.error("Render Loop Error: " + e.message);
+            }
+        }
+
+        document.getElementById('reviewForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            if (!supabase) { alert("Database not ready."); return; }
+            const secret = document.getElementById('secretCode').value;
+            if (secret !== SECRET_CODE) { alert('Wrong code'); return; }
+
+            const btn = e.target.querySelector('button');
+            btn.disabled = true;
+            btn.innerText = 'Uploading...';
+
+            try {
+                const title = document.getElementById('bookTitle').value;
+                const rating = document.getElementById('rating').value.toString();
+                const text = document.getElementById('reviewText').value;
+                const file = document.getElementById('bookCover').files[0];
+
+                let coverUrl = '';
+
+                if (!editingReviewId) {
+                    // Create New
+                    if (!file) { alert("Cover image required for new review."); btn.disabled = false; btn.innerText = 'Save Review'; return; }
+
+                    const fileName = 'covers/' + Date.now();
+                    const { data, error: upErr } = await supabase.storage.from('book-covers').upload(fileName, file);
+                    if (upErr) throw upErr;
+
+                    coverUrl = supabase.storage.from('book-covers').getPublicUrl(fileName).data.publicUrl;
+
+                    const { error: inErr } = await supabase.from('reviews').insert({
+                        title: title,
+                        review_text: text,
+                        rating: parseInt(rating),
+                        cover_url: coverUrl,
+                        voca: document.getElementById('bookWord').value,
+                        commandment: document.getElementById('bookCommand').value
+                    });
+                    if (inErr) throw inErr;
+
+                    alert("Saved!");
+                    location.reload();
+                } else {
+                    // UPDATE Review
+                    let updateData = {
+                        title: title,
+                        review_text: text,
+                        rating: parseInt(rating),
+                        voca: document.getElementById('bookWord').value,
+                        commandment: document.getElementById('bookCommand').value
+                    };
+
+                    if (file) {
+                        const fileName = 'covers/' + Date.now();
+                        const { data, error: upErr } = await supabase.storage.from('book-covers').upload(fileName, file);
+                        if (upErr) throw upErr;
+
+                        coverUrl = supabase.storage.from('book-covers').getPublicUrl(fileName).data.publicUrl;
+                        updateData.cover_url = coverUrl;
+                    }
+
+                    const { error: upErr } = await supabase
+                        .from('reviews')
+                        .update(updateData)
+                        .eq('id', editingReviewId);
+
+                    if (upErr) throw upErr;
+
+                    alert("Updated!");
+                    location.reload();
+                }
+            } catch (e) {
+                console.error("Submit Err: " + e.message);
+                alert("Error: " + e.message);
+                btn.disabled = false;
+                btn.innerText = 'Save Review';
+            }
+        });
+
+        // Flip Logic
+        const book = document.getElementById('book');
+
+        function openBook() {
+            // Open State:
+            // We see spread: [Left Page] | [Right Page]
+            // This occupies the full 900px.
+            // To center this, we shift wrapper to 0%. (Was -25%, so +25%)
+            book.style.transform = "translateX(0%)";
+        }
+
+        function closeBook(isAtBeginning) {
+            if (isAtBeginning) {
+                // Return to Closed State
+                // Cover (Right Half) visible. Center it by shifting Left.
+                book.style.transform = "translateX(-25%)";
+            } else {
+                // End State:
+                // We see Back Cover (Left Page). 
+                // It occupies left 50%.
+                // To center this Left Half, we must shift wrapper RIGHT by 25%.
+                book.style.transform = "translateX(25%)";
+            }
+        }
+
+        function updateLayout() {
+            const rightCol = document.querySelector('.right-column');
+            const leftCol = document.querySelector('.left-column');
+            const bookScaler = document.querySelector('.book-scaler');
+
+            if (currentState === 1) {
+                // Cover State: Side-by-Side
+                if (rightCol) rightCol.style.display = 'block';
+                if (leftCol) leftCol.style.flex = '2';
+                // Reset scale if needed, or keep it consistent
+                if (bookScaler) bookScaler.style.transform = 'scale(0.85)';
+            } else {
+                // Open State: Full Width
+                if (rightCol) rightCol.style.display = 'none';
+                if (leftCol) leftCol.style.flex = '1';
+                // Optional: Scale up slightly for better visibility in full mode
+                if (bookScaler) bookScaler.style.transform = 'scale(1)';
+            }
+        }
+
+        function goNextPage() {
+            if (currentState < maxState) {
+                const currentPaper = document.querySelector('#p' + currentState);
+
+                if (currentState === 1) openBook();
+
+                if (currentPaper) {
+                    currentPaper.classList.add("flipped");
+                    currentPaper.style.zIndex = currentState;
+                }
+
+                if (currentState === numOfPapers) closeBook(false);
+
+                currentState++;
+                updateLayout();
+            }
+        }
+
+        function goPrevPage() {
+            if (currentState > 1) {
+                currentState--;
+                const prevPaper = document.querySelector('#p' + currentState);
+
+                if (currentState === 1) {
+                    closeBook(true);
+                } else {
+                    openBook();
+                }
+
+                if (prevPaper) {
+                    prevPaper.classList.remove("flipped");
+                    const newZ = (numOfPapers + 5) - currentState;
+                    prevPaper.style.zIndex = newZ;
+                }
+                updateLayout();
+            }
+        }
+
+        nextBtn.addEventListener("click", goNextPage);
+        prevBtn.addEventListener("click", goPrevPage);
+
+        // Start
+        loadReviews();
+    </script>
+</body>
+
+</html>
