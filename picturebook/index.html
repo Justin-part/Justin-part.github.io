@@ -555,12 +555,12 @@
         let editingReviewId = null;
 
         async function loadReviews() {
-            alert("loadReviews STARTED");
+            console.error("loadReviews STARTED");
             if (!supabase) {
-                alert("loadReviews ERROR: supabase is null!");
+                console.error("loadReviews ERROR: supabase is null!");
                 return;
             }
-            alert("loadReviews supabase is OK, fetching data...");
+            console.error("loadReviews supabase is OK, fetching data...");
 
             try {
                 const response = await supabase
@@ -571,7 +571,7 @@
                 const data = response.data;
                 const err = response.error;
 
-                alert("loadReviews FETCH DONE. Error: " + (err ? err.message : "None") + ", Data length: " + (data ? data.length : "null"));
+                console.error("loadReviews FETCH DONE. Error: " + (err ? err.message : "None") + ", Data length: " + (data ? data.length : "null"));
 
                 if (err) {
                     console.error("Fetch error: " + err.message);
@@ -580,14 +580,14 @@
                 }
 
                 allReviews = data || [];
-                alert("loadReviews calling renderBook...");
+                console.error("loadReviews calling renderBook...");
                 renderBook(allReviews);
-                alert("loadReviews calling renderTable...");
+                console.error("loadReviews calling renderTable...");
                 renderTable(allReviews);
-                alert("loadReviews FINISHED!");
+                console.error("loadReviews FINISHED!");
 
             } catch (fatalError) {
-                alert("FATAL ERROR IN LOADREVIEWS: " + fatalError.message);
+                console.error("FATAL ERROR IN LOADREVIEWS: " + fatalError.message);
             }
         }
 
@@ -911,7 +911,7 @@
         prevBtn.addEventListener("click", goPrevPage);
 
         // Start
-        loadReviews().catch(err => alert("HIDDEN ERROR: " + err.message + " | " + err.stack));
+        loadReviews().catch(err => console.error("HIDDEN ERROR: " + err.message + " | " + err.stack));
     </script>
 </body>
 
