@@ -892,7 +892,7 @@
         prevBtn.addEventListener("click", goPrevPage);
 
         // Start
-        loadReviews();
+        loadReviews().catch(err => alert("HIDDEN ERROR: " + err.message + " | " + err.stack));
     </script>
 </body>
 
