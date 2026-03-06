@@ -555,21 +555,40 @@
         let editingReviewId = null;
 
         async function loadReviews() {
-            if (!supabase) return;
-
-            const { data: reviews, error: err } = await supabase
-                .from('reviews')
-                .select('*')
-                .order('created_at', { ascending: false }); // Newest First
-
-            if (err) {
-                console.error("Fetch error: " + err.message);
-                alert("Failed to load reviews.");
+            alert("loadReviews STARTED");
+            if (!supabase) {
+                alert("loadReviews ERROR: supabase is null!");
                 return;
             }
-            allReviews = reviews || [];
-            renderBook(allReviews);
-            renderTable(allReviews);
+            alert("loadReviews supabase is OK, fetching data...");
+
+            try {
+                const response = await supabase
+                    .from('reviews')
+                    .select('*')
+                    .order('created_at', { ascending: false }); // Newest First
+
+                const data = response.data;
+                const err = response.error;
+
+                alert("loadReviews FETCH DONE. Error: " + (err ? err.message : "None") + ", Data length: " + (data ? data.length : "null"));
+
+                if (err) {
+                    console.error("Fetch error: " + err.message);
+                    alert("Failed to load reviews.");
+                    return;
+                }
+
+                allReviews = data || [];
+                alert("loadReviews calling renderBook...");
+                renderBook(allReviews);
+                alert("loadReviews calling renderTable...");
+                renderTable(allReviews);
+                alert("loadReviews FINISHED!");
+
+            } catch (fatalError) {
+                alert("FATAL ERROR IN LOADREVIEWS: " + fatalError.message);
+            }
         }
 
         function renderTable(reviews) {
