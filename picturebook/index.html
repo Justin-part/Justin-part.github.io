@@ -505,11 +505,10 @@
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpvZnRqdnpicGhjaWhuZG1yc3ZnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEzOTM3MjYsImV4cCI6MjA4Njk2OTcyNn0.45_A2YcoA27svdZJ5HEDmUY-3HMTqFYts8ty-30k55U';
         const SECRET_CODE = '1234';
 
-        // Check Supabase
-        let supabase = null;
+        let supabaseClient = null;
         if (typeof window.supabase !== 'undefined') {
             try {
-                supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
             } catch (e) {
                 console.error("Supabase Init Failed: " + e.message);
                 alert("Database Connection Failed. Please refresh.");
@@ -556,14 +555,14 @@
 
         async function loadReviews() {
             console.error("loadReviews STARTED");
-            if (!supabase) {
-                console.error("loadReviews ERROR: supabase is null!");
+            if (!supabaseClient) {
+                console.error("loadReviews ERROR: supabaseClient is null!");
                 return;
             }
-            console.error("loadReviews supabase is OK, fetching data...");
+            console.error("loadReviews supabaseClient is OK, fetching data...");
 
             try {
-                const response = await supabase
+                const response = await supabaseClient
                     .from('reviews')
                     .select('*')
                     .order('created_at', { ascending: false }); // Newest First
@@ -746,10 +745,10 @@
             }
         }
 
-        document.getElementById('reviewForm').addEventListener('submit', async function (e) {
+        document.getElementById('reviewForm').addEventListener('submit', async function saveReview(e) {
             e.preventDefault();
 
-            if (!supabase) { alert("Database not ready."); return; }
+            if (!supabaseClient) { alert("Database not ready."); return; }
             const secret = document.getElementById('secretCode').value;
             if (secret !== SECRET_CODE) { alert('Wrong code'); return; }
 
@@ -770,12 +769,12 @@
                     if (!file) { alert("Cover image required for new review."); btn.disabled = false; btn.innerText = 'Save Review'; return; }
 
                     const fileName = 'covers/' + Date.now();
-                    const { data, error: upErr } = await supabase.storage.from('book-covers').upload(fileName, file);
+                    const { data, error: upErr } = await supabaseClient.storage.from('book-covers').upload(fileName, file);
                     if (upErr) throw upErr;
 
-                    coverUrl = supabase.storage.from('book-covers').getPublicUrl(fileName).data.publicUrl;
+                    coverUrl = supabaseClient.storage.from('book-covers').getPublicUrl(fileName).data.publicUrl;
 
-                    const { error: inErr } = await supabase.from('reviews').insert({
+                    const { error: inErr } = await supabaseClient.from('reviews').insert({
                         title: title,
                         review_text: text,
                         rating: parseInt(rating),
@@ -799,14 +798,14 @@
 
                     if (file) {
                         const fileName = 'covers/' + Date.now();
-                        const { data, error: upErr } = await supabase.storage.from('book-covers').upload(fileName, file);
+                        const { data, error: upErr } = await supabaseClient.storage.from('book-covers').upload(fileName, file);
                         if (upErr) throw upErr;
 
-                        coverUrl = supabase.storage.from('book-covers').getPublicUrl(fileName).data.publicUrl;
+                        coverUrl = supabaseClient.storage.from('book-covers').getPublicUrl(fileName).data.publicUrl;
                         updateData.cover_url = coverUrl;
                     }
 
-                    const { error: upErr } = await supabase
+                    const { error: upErr } = await supabaseClient
                         .from('reviews')
                         .update(updateData)
                         .eq('id', editingReviewId);
