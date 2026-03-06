@@ -444,6 +444,8 @@
                     <tr style="background:#f8f9fa;">
                         <th style="padding:10px; text-align:left; border-bottom:1px solid #ddd;">Title</th>
                         <th style="padding:10px; text-align:center; border-bottom:1px solid #ddd;">Level</th>
+                        <th style="padding:10px; text-align:center; border-bottom:1px solid #ddd;">word</th>
+                        <th style="padding:10px; text-align:center; border-bottom:1px solid #ddd;">comm.</th>
                         <th style="padding:10px; text-align:center; border-bottom:1px solid #ddd;">Edit</th>
                     </tr>
                 </thead>
@@ -465,7 +467,12 @@
                 <div class="form-group">
                     <label>Book Title <input type="text" id="bookTitle" required></label>
                 </div>
-
+                <div class="form-group">
+                    <label>word <input type="text" id="bookWord"></label>
+                </div>
+                <div class="form-group">
+                    <label>comm. <input type="text" id="bookCommand"></label>
+                </div>
                 <div class="form-group">
                     <label>Cover Image <input type="file" id="bookCover" accept="image/*" required></label>
                 </div>
@@ -581,7 +588,8 @@
                     <td style="padding:10px; text-align:center; border-bottom:1px solid #eee;">
                         <span style="background:#f1c40f; color:white; padding:2px 8px; border-radius:10px; font-size:0.8em;">Lv.${review.rating}</span>
                     </td>
-
+                    <td style="padding:10px; text-align:center; border-bottom:1px solid #eee;">${review.voca || ''}</td>
+                    <td style="padding:10px; text-align:center; border-bottom:1px solid #eee;">${review.commandment || ''}</td>
                     <td style="padding:10px; text-align:center; border-bottom:1px solid #eee;">
                         <button class="btn-edit-sm" onclick="editReview(${index})">Edit</button>
                     </td>
@@ -598,7 +606,8 @@
 
             // Populate Modal
             document.getElementById('bookTitle').value = review.title;
-
+            document.getElementById('bookWord').value = review.voca || '';
+            document.getElementById('bookCommand').value = review.commandment || '';
             document.getElementById('rating').value = review.rating;
             document.getElementById('reviewText').value = review.review_text;
             document.getElementById('secretCode').value = ''; // User must re-enter code
@@ -751,7 +760,9 @@
                         title: title,
                         review_text: text,
                         rating: parseInt(rating),
-                        cover_url: coverUrl
+                        cover_url: coverUrl,
+                        voca: document.getElementById('bookWord').value,
+                        commandment: document.getElementById('bookCommand').value
                     });
                     if (inErr) throw inErr;
 
@@ -762,7 +773,9 @@
                     let updateData = {
                         title: title,
                         review_text: text,
-                        rating: parseInt(rating)
+                        rating: parseInt(rating),
+                        voca: document.getElementById('bookWord').value,
+                        commandment: document.getElementById('bookCommand').value
                     };
 
                     if (file) {
